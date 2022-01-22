@@ -96,35 +96,6 @@ float comput_recall(std::vector<std::vector<unsigned>> &res, unsigned *gt, unsig
   return (float)correct / total;
 }
 
-class clk_get {
-    struct timespec ts;
-    long time_begin_s, time_begin_ns;
-public:
-    clk_get() {
-        clock_gettime(CLOCK_MONOTONIC, &ts);
-        time_begin_s = ts.tv_sec;
-        time_begin_ns = ts.tv_nsec;
-    }
-    float getElapsedTimens() {
-        clock_gettime(CLOCK_MONOTONIC, &ts);
-        return ((ts.tv_sec - time_begin_s) * 1e9 + (ts.tv_nsec - time_begin_ns));
-    }
-    float getElapsedTimeus() {
-        return (1e-3 * getElapsedTimens());
-    }
-    float getElapsedTimems() {
-        return (1e-6 * getElapsedTimens());
-    }
-    float getElapsedTimes() {
-        return (1e-9 * getElapsedTimens());
-    }
-    void reset() {
-        clock_gettime(CLOCK_MONOTONIC, &ts);
-        time_begin_s = ts.tv_sec;
-        time_begin_ns = ts.tv_nsec;
-    }
-};
-
 void save_result(const char* filename,
                  std::vector<std::vector<unsigned> >& results) {
   std::ofstream out(filename, std::ios::binary | std::ios::out);
@@ -170,7 +141,7 @@ int main(int argc, char** argv) {
 
   // load gt
   unsigned *gt_all = new unsigned[query_num * 100]();
-  unsigned *gt_k = new unsigned[query_num * query_dim]();
+  unsigned *gt_k = new unsigned[query_num * K]();
   std::string path_gt = std::string(argv[6]);
   LoadBinToArray<unsigned>(path_gt, gt_all, query_num, 100);
   for (size_t i = 0; i < query_num; i++)
@@ -179,7 +150,7 @@ int main(int argc, char** argv) {
 
   std::string log_output = std::string(argv[7]);
   std::ofstream log_writer(log_output.c_str(), std::ios::trunc);
-  assignToThisCore(17);
+  assignToThisCore(27);
 
   // set L
   std::vector<unsigned> efs;
@@ -193,6 +164,7 @@ int main(int argc, char** argv) {
     efs.push_back(i);
   }
 
+  log_writer << "R@" << std::to_string(K) << ",qps" << std::endl;
   for (unsigned L_s: efs){
 
     paras.Set<unsigned>("L_search", L_s);
@@ -201,18 +173,16 @@ int main(int argc, char** argv) {
     std::vector<std::vector<unsigned> > res(query_num);
     for (unsigned i = 0; i < query_num; i++) res[i].resize(K);
 
-    auto s = std::chrono::high_resolution_clock::now();
+    auto s = std::chrono::steady_clock::now();
     for (unsigned i = 0; i < query_num; i++) {
       index.SearchWithOptGraph(query_load + i * dim, K, paras, res[i].data());
     }
-    auto e = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> diff = e - s;
-    double time_us_per_query = diff.count() / query_num;
+    double time_per_query = std::chrono::duration<double>(std::chrono::steady_clock::now() - s).count() / query_num;
 
     float recall = comput_recall(res, gt_k, query_num, K);
 
-    std::cout << recall << "\t" << (1.0 / time_us_per_query) << std::endl;
-    log_writer << recall << "," << (1.0 / time_us_per_query) << std::endl;
+    std::cout << recall << "\t" << (1.0 / time_per_query) << std::endl;
+    log_writer << recall << "," << (1.0 / time_per_query) << std::endl;
 
     // std::cout << "search time: " << diff.count() << "\n";
   }

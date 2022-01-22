@@ -43,6 +43,11 @@ void load_data(char* filename, float*& data, unsigned& num,
   in.close();
 }
 
+inline bool exists_test(const char *name) {
+    std::ifstream f(name);
+    return f.good();
+}
+
 int main(int argc, char** argv) {
   if (argc != 7) {
     std::cout << argv[0] << " data_file nn_graph_path L R C save_graph_file"
@@ -58,11 +63,16 @@ int main(int argc, char** argv) {
   unsigned R = (unsigned)atoi(argv[4]);
   unsigned C = (unsigned)atoi(argv[5]);
 
+  if (exists_test(argv[6])){
+    printf("Index %s is existed \n", argv[6]);
+    return 0;
+  }
+
   // data_load = efanna2e::data_align(data_load, points_num, dim);//one must
   // align the data before build
   efanna2e::IndexNSG index(dim, points_num, efanna2e::L2, nullptr);
 
-  auto s = std::chrono::high_resolution_clock::now();
+  auto s = std::chrono::steady_clock::now();
   efanna2e::Parameters paras;
   paras.Set<unsigned>("L", L);
   paras.Set<unsigned>("R", R);
@@ -70,7 +80,7 @@ int main(int argc, char** argv) {
   paras.Set<std::string>("nn_graph_path", nn_graph_path);
 
   index.Build(points_num, data_load, paras);
-  auto e = std::chrono::high_resolution_clock::now();
+  auto e = std::chrono::steady_clock::now();
   std::chrono::duration<double> diff = e - s;
 
   std::cout << "indexing time: " << diff.count() << "\n";

@@ -71,14 +71,14 @@ int main(int argc, char** argv) {
   paras.Set<unsigned>("L_search", L);
   paras.Set<unsigned>("P_search", L);
 
-  auto s = std::chrono::high_resolution_clock::now();
+  auto s = std::chrono::steady_clock::now();
   std::vector<std::vector<unsigned> > res;
   for (unsigned i = 0; i < query_num; i++) {
     std::vector<unsigned> tmp(K);
     index.Search(query_load + i * dim, data_load, K, paras, tmp.data());
     res.push_back(tmp);
   }
-  auto e = std::chrono::high_resolution_clock::now();
+  auto e = std::chrono::steady_clock::now();
   std::chrono::duration<double> diff = e - s;
   std::cout << "search time: " << diff.count() << "\n";
 
