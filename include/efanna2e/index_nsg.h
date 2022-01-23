@@ -16,6 +16,9 @@ namespace efanna2e {
 
 class IndexNSG : public Index {
  public:
+  void SetHops();
+  void GetHops(int* hops);
+
   explicit IndexNSG(const size_t dimension, const size_t n, Metric m, Index *initializer);
 
 
@@ -79,6 +82,7 @@ class IndexNSG : public Index {
     size_t data_len;
     size_t neighbor_len;
     KNNGraph nnd_graph;
+    int hops;
 };
 }
 

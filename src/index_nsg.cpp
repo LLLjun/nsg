@@ -17,6 +17,13 @@ IndexNSG::IndexNSG(const size_t dimension, const size_t n, Metric m,
 
 IndexNSG::~IndexNSG() {}
 
+void IndexNSG::SetHops() {
+  hops = 0;
+}
+void IndexNSG::GetHops(int *hop) {
+  *hop = hops;
+}
+
 void IndexNSG::Save(const char *filename) {
   std::ofstream out(filename, std::ios::binary | std::ios::out);
   assert(final_graph_.size() == nd_);
@@ -102,6 +109,7 @@ void IndexNSG::get_neighbors(const float *query, const Parameters &parameter,
     // std::cout<<id<<std::endl;
     float dist = distance_->compare(data_ + dimension_ * (size_t)id, query,
                                     (unsigned)dimension_);
+    hops++;
     retset[i] = Neighbor(id, dist, true);
     // flags[id] = 1;
     L++;
@@ -123,6 +131,7 @@ void IndexNSG::get_neighbors(const float *query, const Parameters &parameter,
 
         float dist = distance_->compare(query, data_ + dimension_ * (size_t)id,
                                         (unsigned)dimension_);
+        hops++;
         Neighbor nn(id, dist, true);
         fullset.push_back(nn);
         if (dist >= retset[L - 1].distance) continue;
@@ -170,6 +179,7 @@ void IndexNSG::get_neighbors(const float *query, const Parameters &parameter,
     // std::cout<<id<<std::endl;
     float dist = distance_->compare(data_ + dimension_ * (size_t)id, query,
                                     (unsigned)dimension_);
+    hops++;
     retset[i] = Neighbor(id, dist, true);
     fullset.push_back(retset[i]);
     // flags[id] = 1;
@@ -192,6 +202,7 @@ void IndexNSG::get_neighbors(const float *query, const Parameters &parameter,
 
         float dist = distance_->compare(query, data_ + dimension_ * (size_t)id,
                                         (unsigned)dimension_);
+        hops++;
         Neighbor nn(id, dist, true);
         fullset.push_back(nn);
         if (dist >= retset[L - 1].distance) continue;
@@ -240,6 +251,7 @@ void IndexNSG::sync_prune(unsigned q, std::vector<Neighbor> &pool,
     float dist =
         distance_->compare(data_ + dimension_ * (size_t)q,
                            data_ + dimension_ * (size_t)id, (unsigned)dimension_);
+        hops++;
     pool.push_back(Neighbor(id, dist, true));
   }
 
@@ -259,6 +271,7 @@ void IndexNSG::sync_prune(unsigned q, std::vector<Neighbor> &pool,
       float djk = distance_->compare(data_ + dimension_ * (size_t)result[t].id,
                                      data_ + dimension_ * (size_t)p.id,
                                      (unsigned)dimension_);
+      hops++;
       if (djk < p.distance /* dik */) {
         occlude = true;
         break;
@@ -320,6 +333,7 @@ void IndexNSG::InterInsert(unsigned n, unsigned range,
           float djk = distance_->compare(data_ + dimension_ * (size_t)result[t].id,
                                          data_ + dimension_ * (size_t)p.id,
                                          (unsigned)dimension_);
+          hops++;
           if (djk < p.distance /* dik */) {
             occlude = true;
             break;
@@ -357,12 +371,12 @@ void IndexNSG::Link(const Parameters &parameters, SimpleNeighbor *cut_graph_) {
   unsigned range = parameters.Get<unsigned>("R");
   std::vector<std::mutex> locks(nd_);
 
-#pragma omp parallel
+// #pragma omp parallel
   {
     // unsigned cnt = 0;
     std::vector<Neighbor> pool, tmp;
     boost::dynamic_bitset<> flags{nd_, 0};
-#pragma omp for schedule(dynamic, 100)
+// #pragma omp for schedule(dynamic, 100)
     for (unsigned n = 0; n < nd_; ++n) {
       pool.clear();
       tmp.clear();
@@ -379,7 +393,7 @@ void IndexNSG::Link(const Parameters &parameters, SimpleNeighbor *cut_graph_) {
     }
   }
 
-#pragma omp for schedule(dynamic, 100)
+// #pragma omp for schedule(dynamic, 100)
   for (unsigned n = 0; n < nd_; ++n) {
     InterInsert(n, range, locks, cut_graph_);
   }
@@ -452,6 +466,7 @@ void IndexNSG::Search(const float *query, const float *x, size_t K,
     unsigned id = init_ids[i];
     float dist =
         distance_->compare(data_ + dimension_ * id, query, (unsigned)dimension_);
+    hops++;
     retset[i] = Neighbor(id, dist, true);
     // flags[id] = true;
   }
@@ -471,6 +486,7 @@ void IndexNSG::Search(const float *query, const float *x, size_t K,
         flags[id] = 1;
         float dist =
             distance_->compare(query, data_ + dimension_ * id, (unsigned)dimension_);
+        hops++;
         if (dist >= retset[L - 1].distance) continue;
         Neighbor nn(id, dist, true);
         int r = InsertIntoPool(retset.data(), L, nn);
@@ -530,6 +546,7 @@ void IndexNSG::SearchWithOptGraph(const float *query, size_t K,
     float norm_x = *x;
     x++;
     float dist = dist_fast->compare(x, query, norm_x, (unsigned)dimension_);
+    hops++;
     retset[i] = Neighbor(id, dist, true);
     flags[id] = true;
     L++;
@@ -559,6 +576,7 @@ void IndexNSG::SearchWithOptGraph(const float *query, size_t K,
         float norm = *data;
         data++;
         float dist = dist_fast->compare(query, data, norm, (unsigned)dimension_);
+        hops++;
         if (dist >= retset[L - 1].distance) continue;
         Neighbor nn(id, dist, true);
         int r = InsertIntoPool(retset.data(), L, nn);

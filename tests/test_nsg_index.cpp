@@ -63,15 +63,16 @@ int main(int argc, char** argv) {
   unsigned R = (unsigned)atoi(argv[4]);
   unsigned C = (unsigned)atoi(argv[5]);
 
-  if (exists_test(argv[6])){
-    printf("Index %s is existed \n", argv[6]);
-    return 0;
-  }
+//  if (exists_test(argv[6])){
+//    printf("Index %s is existed \n", argv[6]);
+//    return 0;
+//  }
 
   // data_load = efanna2e::data_align(data_load, points_num, dim);//one must
   // align the data before build
   efanna2e::IndexNSG index(dim, points_num, efanna2e::L2, nullptr);
-
+  int hops;
+  index.SetHops();
   auto s = std::chrono::steady_clock::now();
   efanna2e::Parameters paras;
   paras.Set<unsigned>("L", L);
@@ -84,6 +85,8 @@ int main(int argc, char** argv) {
   std::chrono::duration<double> diff = e - s;
 
   std::cout << "indexing time: " << diff.count() << "\n";
+  index.GetHops(&hops);
+  std::cout << "distance calculation hops: " << hops << "\n";
   index.Save(argv[6]);
 
   return 0;

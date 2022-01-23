@@ -164,12 +164,13 @@ int main(int argc, char** argv) {
     efs.push_back(i);
   }
 
-  log_writer << "R@" << std::to_string(K) << ",qps" << std::endl;
+  log_writer << "R@" << std::to_string(K) << ",qps,hops per query" << std::endl;
   for (unsigned L_s: efs){
 
     paras.Set<unsigned>("L_search", L_s);
     paras.Set<unsigned>("P_search", L_s);
-
+    int hops;
+    index.SetHops();
     std::vector<std::vector<unsigned> > res(query_num);
     for (unsigned i = 0; i < query_num; i++) res[i].resize(K);
 
@@ -181,8 +182,9 @@ int main(int argc, char** argv) {
 
     float recall = comput_recall(res, gt_k, query_num, K);
 
-    std::cout << recall << "\t" << (1.0 / time_per_query) << std::endl;
-    log_writer << recall << "," << (1.0 / time_per_query) << std::endl;
+    index.GetHops(&hops);
+    std::cout << recall << "\t" << (1.0 / time_per_query) << "\t" << (1.0 * hops / query_num) << std::endl;
+    log_writer << recall << "," << (1.0 / time_per_query) << "," << (1.0 * hops / query_num) << std::endl;
 
     // std::cout << "search time: " << diff.count() << "\n";
   }
